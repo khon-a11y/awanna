@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Awana 每週分數記錄表</title>
+<style>
+  /* ==========================================================
+     Awana Score Sheet — 「運動會計分牌」視覺
+     暖色紙張 + 濃墨邊框 + 四色隊伍色塊
+     ========================================================== */
+  :root{
+    --paper:#f4ecd9;
+    --paper-2:#fffaf0;
+    --paper-3:#efe4c9;
+    --ink:#33271a;
+    --ink-soft:#7d6b52;
+    --line:#d8c6a2;
+    --vermilion:#d9482a;
+    --vermilion-dark:#b03418;
+    --gold:#e2a723;
+    --gold-soft:#f3dfae;
+    --green-ink:#3c7a3e;
+    --shadow:rgba(51,39,26,.22);
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; min-height:100%;}
+  body{
+    background:
+      radial-gradient(circle at 12% -10%, rgba(226,167,35,.16), transparent 42%),
+      radial-gradient(circle at 92% 8%, rgba(217,72,42,.10), transparent 40%),
+      var(--paper);
+    color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+    -webkit-text-size-adjust:100%;
+  }
+  ::selection{background:var(--gold); color:var(--ink);}
+  :focus-visible{outline:3px solid var(--vermilion); outline-offset:2px;}
+
+  /* 彩旗裝飾條 */
+  .bunting{
+    height:10px;
+    background:repeating-linear-gradient(115deg,
+      var(--vermilion) 0 22px, var(--gold) 22px 44px,
+      var(--green-ink) 44px 66px, #2b64b8 66px 88px);
+  }
+
+  #app{
+    height:calc(100vh - 10px); height:calc(100dvh - 10px);
+    display:flex; flex-direction:column; overflow:hidden;
+    padding:max(clamp(12px,2vw,22px), env(safe-area-inset-top)) clamp(12px,2.4vw,28px) calc(14px + env(safe-area-inset-bottom));
+    gap:clamp(10px,1.6vw,18px);
+    max-width:1500px; margin:0 auto; width:100%;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+    gap:14px; border-bottom:4px solid var(--ink); padding-bottom:12px;
+    animation:rise .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .brand{flex:1 1 300px; min-width:240px;}
+  .pennants{display:flex; gap:6px; margin-bottom:6px;}
+  .pennants i{
+    width:0; height:0; border-left:9px solid transparent; border-right:9px solid transparent;
+    border-top:14px solid var(--vermilion); display:block;
+  }
+  .pennants i:nth-child(2){border-top-color:var(--gold);}
+  .pennants i:nth-child(3){border-top-color:var(--green-ink);}
+  .pennants i:nth-child(4){border-top-color:#2b64b8;}
+  #title{
+    font-size:clamp(26px,4.6vw,46px); font-weight:900; line-height:1.12; letter-spacing:2px;
+    outline:none; border-radius:8px; padding:2px 6px; margin-left:-6px;
+  }
+  #subtitle{
+    font-size:clamp(13px,1.7vw,18px); color:var(--ink-soft); font-weight:500; letter-spacing:.5px;
+    outline:none; border-radius:8px; padding:2px 6px; margin-left:-6px;
+  }
+  #title:focus,#subtitle:focus{background:var(--gold-soft);}
+  .head-tools{display:flex; flex-wrap:wrap; align-items:center; gap:10px;}
+  .date-box{
+    display:flex; align-items:center; gap:8px; background:var(--paper-2);
+    border:2.5px solid var(--ink); border-radius:12px; padding:9px 14px;
+    box-shadow:0 3px 0 var(--shadow); font-family:inherit;
+  }
+  .date-label{
+    font-size:11px; font-weight:900; letter-spacing:2.5px; color:var(--ink-soft);
+  }
+  .date-box input{
+    background:transparent; border:none; color:var(--ink); font-size:16px; font-weight:900;
+    outline:none; color-scheme:light; font-family:"Archivo Black","Noto Sans TC",sans-serif;
+    letter-spacing:.5px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    border:2.5px solid var(--ink); background:var(--paper-2); color:var(--ink);
+    padding:11px 16px; border-radius:12px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:inherit; white-space:nowrap;
+    box-shadow:0 3px 0 var(--ink);
+    transition:transform .08s ease, box-shadow .08s ease, background .15s ease;
+  }
+  .btn:hover{background:var(--gold-soft);}
+  .btn:active{transform:translateY(3px); box-shadow:0 0 0 var(--ink);}
+  .btn.primary{background:var(--vermilion); border-color:var(--vermilion-dark); color:#fff6e8; box-shadow:0 3px 0 var(--vermilion-dark);}
+  .btn.primary:hover{background:var(--vermilion-dark);}
+  .btn.danger{background:var(--paper-2); border-color:var(--vermilion-dark); color:var(--vermilion-dark); box-shadow:0 3px 0 var(--vermilion-dark);}
+  .btn.danger:hover{background:#f7ddd2;}
+  .btn.ghost{background:transparent; box-shadow:none; border-color:transparent;}
+  .btn.small{padding:6px 11px; font-size:12.5px; border-width:2px; border-radius:10px; box-shadow:0 2px 0 var(--ink);}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    animation:rise .5s .07s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .save-flag{
+    margin-left:auto; font-size:12.5px; font-weight:700; color:var(--green-ink);
+    display:flex; align-items:center; gap:7px;
+  }
+  .save-flag .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--green-ink);
+    box-shadow:0 0 0 3px rgba(60,122,62,.18);
+  }
+  .check{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-soft); font-weight:500; cursor:pointer; user-select:none;}
+  .check input{width:17px; height:17px; accent-color:var(--vermilion);}
+
+  /* ---------- Sheet / Table ---------- */
+  .table-wrap{
+    flex:1 1 0; min-height:0; overflow:auto; background:var(--paper-2);
+    border:3px solid var(--ink); border-radius:16px;
+    box-shadow:0 7px 0 var(--shadow);
+    -webkit-overflow-scrolling:touch;
+    animation:rise .5s .12s cubic-bezier(.2,.8,.2,1) both;
+  }
+  table{border-collapse:separate; border-spacing:0; width:100%; min-width:860px;}
+  th,td{
+    border-right:1.5px solid var(--line); border-bottom:1.5px solid var(--line);
+    padding:11px 10px; text-align:center; font-size:15px;
+  }
+  th:last-child,td:last-child{border-right:none;}
+  tbody tr:last-child td{border-bottom:none;}
+  thead th{
+    position:sticky; top:0; z-index:6; padding:14px 10px;
+    font-size:18px; font-weight:900; letter-spacing:3px; color:#fff8ea;
+    text-shadow:0 1px 2px rgba(0,0,0,.28);
+  }
+  thead th.head-item{
+    position:sticky; top:0; left:0;
+    text-align:left; background:var(--ink); min-width:245px;
+    z-index:7; letter-spacing:4px;
+  }
+  .team-name{outline:none; border-radius:6px; padding:2px 8px; display:inline-block;}
+  .team-name:focus{background:rgba(255,255,255,.28);}
+
+  td.item-col{
+    text-align:left; min-width:245px; background:var(--paper-2);
+    position:sticky; left:0; z-index:3;
+  }
+  .label-row{display:flex; align-items:center; gap:2px;}
+  .label-input{
+    flex:1; min-width:0; background:transparent; border:none; color:var(--ink); font-size:15.5px;
+    font-weight:700; outline:none; font-family:inherit; padding:6px 2px;
+    border-bottom:2px dashed var(--line);
+    resize:none; overflow:hidden; display:block; field-sizing:content;
+    line-height:1.55;
+  }
+  .label-input:focus{border-bottom-color:var(--vermilion); background:rgba(226,167,35,.12);}
+  .row-del{
+    opacity:0; background:transparent; border:none; color:var(--vermilion-dark); cursor:pointer;
+    font-size:15px; padding:3px 8px; border-radius:8px; transition:opacity .15s;
+  }
+  tr:hover .row-del{opacity:.85;}
+
+  /* ---------- Score cells ---------- */
+  .score-cell{vertical-align:top; padding:9px 8px 11px; background:var(--paper-2);}
+  .rank-pills{display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:7px;}
+  .rank-pill{
+    width:31px; height:29px; border-radius:9px; border:2px solid var(--ink);
+    background:var(--paper); color:var(--ink); font-size:15px; font-weight:900;
+    cursor:pointer; padding:0; line-height:24px; font-family:inherit;
+    box-shadow:0 2px 0 var(--ink);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .rank-pill:active{transform:translateY(2px); box-shadow:0 0 0 var(--ink);}
+  .rank-pill.on{
+    color:#fff8ea; border-color:transparent; transform:translateY(-2px);
+    box-shadow:0 4px 0 var(--shadow); animation:pop .22s cubic-bezier(.2,.9,.3,1.2);
+  }
+  .rank-pill.clear{width:27px; font-size:12px; border-style:dashed; color:var(--ink-soft); box-shadow:none;}
+  .score-input{
+    width:100%; max-width:120px; text-align:center;
+    font-family:"Archivo Black","Noto Sans TC",sans-serif;
+    font-size:clamp(21px,3.1vw,30px); line-height:1.15;
+    background:transparent; color:var(--ink);
+    border:none; border-bottom:3px solid var(--line);
+    border-radius:6px 6px 0 0; padding:5px 4px; outline:none;
+    -moz-appearance:textfield;
+  }
+  .score-input::-webkit-outer-spin-button,.score-input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .score-input:focus{border-bottom-color:var(--vermilion); background:rgba(226,167,35,.12);}
+
+  /* ---------- Extra (bonus) input inside score cells ---------- */
+  .extra-wrap{
+    display:flex; align-items:center; justify-content:center; gap:5px;
+    margin-top:7px;
+  }
+  .extra-tag{
+    flex-shrink:0; font-size:10px; font-weight:900; letter-spacing:1px;
+    color:var(--ink-soft); background:var(--paper-3);
+    border-radius:6px; padding:2px 5px; line-height:1.3;
+  }
+  .extra-input{
+    flex:1; min-width:0; max-width:92px; text-align:center;
+    font-family:"Archivo Black","Noto Sans TC",sans-serif;
+    font-size:15px; line-height:1.25;
+    background:transparent; color:var(--vermilion-dark);
+    border:none; border-bottom:2px dashed var(--line);
+    border-radius:6px 6px 0 0; padding:3px 2px; outline:none;
+    -moz-appearance:textfield;
+  }
+  .extra-input::-webkit-outer-spin-button,.extra-input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .extra-input:focus{border-bottom-color:var(--vermilion); background:rgba(226,167,35,.12);}
+
+  .stepper{display:flex; gap:5px; justify-content:center; margin-top:9px; flex-wrap:wrap;}
+  .stepper button{
+    min-width:42px; height:31px; border-radius:9px; border:2px solid var(--ink);
+    background:var(--paper); color:var(--ink); font-size:13.5px; font-weight:900;
+    cursor:pointer; padding:0 4px; box-shadow:0 2px 0 var(--ink);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .stepper button:active{transform:translateY(2px); box-shadow:0 0 0 var(--ink);}
+  .stepper button:not([data-d^="-"]){color:var(--green-ink);}
+  .stepper button[data-d^="-"]{color:var(--vermilion-dark);}
+
+  /* ---------- Section rows ---------- */
+  tr.game-title-row td{
+    background:var(--ink); color:#fff8ea; text-align:left;
+    font-size:17px; font-weight:900; letter-spacing:3px; padding:12px 14px;
+    border-bottom:2px solid var(--ink);
+  }
+  .game-title-row .g-name{outline:none; padding:2px 8px; border-radius:8px;}
+  .game-title-row .g-name:focus{background:rgba(255,255,255,.22);}
+  .game-title-row .pick-btn{filter:invert(1) brightness(2);}
+  .game-title-row .game-del{
+    float:right; color:#f3c8b6; border-color:rgba(255,248,234,.4);
+    box-shadow:0 2px 0 rgba(255,248,234,.25); background:transparent;
+  }
+  .game-title-row .game-del:hover{background:rgba(255,255,255,.14);}
+  tr.helper-row td{background:var(--paper-2); text-align:right; padding:6px 12px;}
+  tr.subtotal-row td{
+    background:var(--gold-soft); font-weight:900; font-size:19px;
+    border-top:3px double var(--ink); border-bottom:3px double var(--ink);
+    font-family:"Archivo Black","Noto Sans TC",sans-serif;
+  }
+  tr.subtotal-row td.item-col{background:var(--gold-soft); letter-spacing:2px;}
+  tr.bonus-row td{background:var(--paper-3);}
+  tr.bonus-row td.item-col{background:var(--paper-3);}
+  tr.bonus-row .label-input{color:var(--vermilion-dark);}
+  tr.note-row td{background:var(--paper-2); text-align:left;}
+  .note-input{
+    width:100%; background:var(--paper-2); border:2px dashed var(--line);
+    border-radius:11px; color:var(--ink); padding:9px 12px; font-size:14px;
+    outline:none; font-family:inherit;
+    resize:none; overflow:hidden; display:block; field-sizing:content;
+    line-height:1.7;
+  }
+  .note-input:focus{border-color:var(--vermilion); background:#fff;}
+  tr.total-row td{
+    background:var(--ink); color:#fff8ea;
+    font-family:"Archivo Black","Noto Sans TC",sans-serif;
+    font-size:clamp(24px,3.8vw,38px); font-weight:900;
+    padding:15px 8px; letter-spacing:1px;
+  }
+  tr.total-row td.item-col{
+    background:var(--ink); font-family:"Noto Sans TC",sans-serif;
+    font-size:clamp(16px,2.2vw,21px); letter-spacing:5px;
+  }
+  tr.total-row td.winner{background:var(--gold); color:var(--ink); text-shadow:none;}
+  .trophy{font-size:.72em; margin-left:6px;}
+
+  /* ---------- Bottom scoreboard ---------- */
+  .scorebar{
+    flex:0 0 auto;
+    display:flex; gap:10px; align-items:stretch; flex-wrap:wrap;
+    animation:rise .5s .18s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .sb-label{
+    display:flex; flex-direction:column; justify-content:center; gap:2px;
+    background:var(--ink); color:#fff8ea; border-radius:14px; padding:10px 18px;
+    border:2.5px solid var(--ink); box-shadow:0 4px 0 var(--shadow);
+    letter-spacing:3px; font-size:13px; font-weight:900;
+  }
+  .sb-label b{font-size:17px; letter-spacing:5px;}
+  .sb-team{
+    flex:1 1 140px; border:2.5px solid var(--ink); border-radius:14px;
+    padding:9px 12px 11px; color:#fff8ea; text-align:center;
+    box-shadow:0 4px 0 var(--shadow);
+    transition:transform .18s cubic-bezier(.2,.8,.2,1);
+  }
+  .sb-name{font-weight:900; letter-spacing:2.5px; font-size:13px; opacity:.96;}
+  .sb-num{
+    font-family:"Archivo Black",sans-serif;
+    font-size:clamp(26px,3.6vw,40px); line-height:1.12; letter-spacing:1px;
+    text-shadow:0 2px 3px rgba(0,0,0,.22);
+  }
+  .sb-team.winner{transform:translateY(-4px); outline:3px solid var(--gold); outline-offset:2px;}
+
+  /* ---------- Footer hint ---------- */
+  .foot-hint{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; gap:8px 18px;
+    font-size:12px; color:var(--ink-soft); font-weight:500;
+  }
+  .foot-hint span::before{content:"·"; margin-right:7px; color:var(--vermilion); font-weight:900;}
+  .foot-hint span:first-child::before{content:""; margin:0;}
+
+  /* ---------- Modals ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(51,39,26,.6);
+    display:none; align-items:center; justify-content:center; z-index:60; padding:16px;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    width:min(600px, 94vw); max-height:calc(100vh - 32px); max-height:calc(100dvh - 32px);
+    min-height:0; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;
+    -webkit-overflow-scrolling:touch;
+    background:var(--paper-2); border:3px solid var(--ink); border-radius:18px;
+    padding:20px; display:flex; flex-direction:column; gap:12px;
+    box-shadow:0 12px 0 rgba(51,39,26,.3);
+    animation:pop .25s cubic-bezier(.2,.9,.3,1.1);
+  }
+  .modal-head{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    border-bottom:3px solid var(--ink); padding-bottom:10px;}
+  .modal-head h3{margin:0; font-size:19px; letter-spacing:2px; font-weight:900;}
+  .picker-list{flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;
+    -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:7px; min-height:0; max-height:45dvh;}
+  .picker-item{
+    padding:12px 15px; border:2px solid var(--ink); border-radius:11px; cursor:pointer;
+    background:var(--paper); font-size:15px; font-weight:500; line-height:1.55;
+    box-shadow:0 2px 0 var(--ink);
+  }
+  .picker-item:hover{background:var(--gold-soft); transform:translateX(3px);}
+
+  .music-controls{display:flex; flex-wrap:wrap; gap:7px;}
+  .music-controls .btn{white-space:normal;}
+  #musicStatus{min-height:1.4em; color:var(--green-ink); font-weight:700; font-size:12px;}
+  .manage-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:9px 13px; border:2px solid var(--line); border-radius:11px; background:var(--paper);
+  }
+  .manage-item span{flex:1; line-height:1.55;}
+  .btn-row{display:flex; flex-wrap:wrap; gap:9px; align-items:center;}
+  textarea.note-input{font-family:inherit;}
+  #namesTextarea{resize:vertical; overflow:auto; field-sizing:fixed;}
+  .pick-btn{
+    background:transparent; border:none; cursor:pointer; font-size:16px; padding:3px 7px;
+    border-radius:9px; opacity:.7; flex-shrink:0;
+  }
+  .pick-btn:hover{opacity:1; background:var(--gold-soft);}
+  .rank-pt{
+    width:68px; text-align:center; font-size:17px; font-weight:900; padding:8px 6px;
+    background:var(--paper); color:var(--ink); border:2px solid var(--ink);
+    border-radius:10px; outline:none; font-family:"Archivo Black","Noto Sans TC",sans-serif;
+    -moz-appearance:textfield; box-shadow:0 2px 0 var(--ink);
+  }
+  .rank-pt::-webkit-outer-spin-button,.rank-pt::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+  .hint{font-size:12.5px; color:var(--ink-soft); line-height:1.75; font-weight:500;}
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff8ea; padding:13px 20px;
+    border-radius:13px; font-size:14px; font-weight:700; letter-spacing:.5px;
+    opacity:0; pointer-events:none; transition:all .25s cubic-bezier(.2,.8,.2,1); z-index:99;
+    max-width:86vw; text-align:center; box-shadow:0 6px 0 rgba(51,39,26,.3);
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Motion / Fullscreen / Responsive ---------- */
+  @keyframes rise{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+  @keyframes pop{from{transform:scale(.82);} to{transform:scale(1);}}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important; transition:none !important;}
+  }
+  :fullscreen body, body:fullscreen{background:var(--paper);}
+  #app:fullscreen{padding:18px;}
+  /* 觸控裝置：刪除按鈕不能只靠 hover 才顯示 */
+  @media (hover:none){
+    .row-del{opacity:.7;}
+  }
+
+  /* ---------- Tablet (iPad / Android tablet) ---------- */
+  @media (max-width:1024px){
+    th,td{padding:9px 7px; font-size:14px;}
+    thead th{padding:11px 7px; font-size:16px; letter-spacing:2px;}
+    thead th.head-item, td.item-col{min-width:175px;}
+    table{min-width:0;}
+    .rank-pill{width:24px; height:25px; font-size:13px; line-height:20px; border-radius:8px;}
+    .rank-pill.clear{width:21px; font-size:10.5px;}
+    .score-input{font-size:clamp(19px,2.8vw,26px); max-width:96px;}
+    .extra-input{max-width:72px; font-size:13.5px;}
+    .stepper button{min-width:32px; height:28px; font-size:12px;}
+    .stepper{gap:4px;}
+    .label-input{font-size:14.5px;}
+    .modal{width:min(600px, 96vw); padding:16px;}
+  }
+
+  /* ---------- Phone (iPhone / 小平板直向) ---------- */
+  @media (max-width:640px){
+    /* 手機：保留可讀的欄寬，讓表格在自身區域橫向捲動 */
+    .table-wrap{overflow:auto; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-width:thin; scrollbar-color:var(--line) transparent;}
+    .table-wrap thead th.head-item,.table-wrap tbody td.item-col{position:sticky; left:0;}
+    .table-wrap thead th.head-item{z-index:9;}
+    .table-wrap tbody td.item-col{z-index:4;}
+    table{min-width:770px; width:100%; table-layout:fixed;}
+    thead th.head-item, td.item-col{min-width:190px; width:190px;}
+    thead th.head-team{width:145px;}
+    th,td{padding:7px 3px; font-size:12.5px;}
+    thead th{padding:9px 3px; font-size:12px; letter-spacing:1px;}
+    .team-name{padding:2px 3px; letter-spacing:1px;}
+    .rank-pills{gap:2px; margin-bottom:5px;}
+    .rank-pill{width:22px; height:21px; font-size:11px; line-height:16px; border-width:1.5px; border-radius:7px;}
+    .rank-pill.clear{width:19px; font-size:9.5px;}
+    .score-input{font-size:17px; max-width:none; padding:3px 1px; border-bottom-width:2px;}
+    .extra-wrap{gap:2px; margin-top:4px;}
+    .extra-tag{display:none;}
+    .extra-input{max-width:none; font-size:12px; border-bottom-width:1.5px;}
+    .stepper{gap:3px; margin-top:6px;}
+    .stepper button{min-width:23px; height:25px; font-size:10.5px; border-width:1.5px; border-radius:7px; padding:0 1px;}
+    .label-input{font-size:12px; padding:4px 1px; line-height:1.4;}
+    .note-input{font-size:10.5px; padding:4px 6px; line-height:1.5; border-radius:8px;}
+    .pick-btn{font-size:12px; padding:2px 3px;}
+    .row-del{font-size:12px; padding:2px 5px;}
+    tr.subtotal-row td{font-size:15px;}
+    tr.game-title-row td{font-size:13px; letter-spacing:1.5px; padding:9px 8px;}
+    tr.total-row td{font-size:22px; padding:11px 3px;}
+    tr.total-row td.item-col{font-size:13px; letter-spacing:2px;}
+    .trophy{display:none;}
+    .save-flag{margin-left:0;}
+    .sb-team{flex:1 1 120px;}
+    .sb-label{flex:1 1 100%; flex-direction:row; align-items:center; justify-content:center; gap:10px;}
+    .modal{width:96vw; max-height:88dvh; padding:14px; border-radius:14px;}
+    .modal-head h3{font-size:16px;}
+    #app{gap:9px;}
+    .masthead{gap:10px; padding-bottom:10px;}
+    .head-tools{width:100%;}
+    .date-box{flex:1; justify-content:center;}
+    .foot-hint{font-size:11px; gap:5px 12px;}
+
+    /* 手機：壓縮表頭/工具列/計分條，把空間留給表格 */
+    #title{font-size:clamp(21px,5.4vw,34px); letter-spacing:1px;}
+    #subtitle{font-size:12px;}
+    .btn{padding:8px 11px; font-size:12.5px; border-width:2px; border-radius:10px;}
+    .btn.small{padding:5px 9px; font-size:11.5px;}
+    .toolbar{gap:7px;}
+    .check{font-size:11.5px; gap:5px;}
+    .check input{width:15px; height:15px;}
+    .save-flag{font-size:11px; gap:5px;}
+    .date-box{padding:6px 10px; gap:6px;}
+    .date-box input{font-size:14px;}
+    .date-label{font-size:9.5px; letter-spacing:1.5px;}
+    .scorebar{gap:7px;}
+    .sb-label{padding:5px 12px; font-size:11px; letter-spacing:2px; gap:8px;}
+    .sb-label b{font-size:13px; letter-spacing:3px;}
+    .sb-team{flex:1 1 62px; padding:5px 6px 7px; border-radius:11px;}
+    .sb-name{font-size:10.5px; letter-spacing:1px;}
+    .sb-num{font-size:22px;}
+    .foot-hint span:nth-child(n+2){display:none;}
+  }
+
+  /* ---------- 窄手機：稍微縮小控件，但不壓縮欄寬 ---------- */
+  @media (max-width:380px){
+    .rank-pill{width:19px; height:19px; font-size:10px; line-height:14px;}
+    .rank-pill.clear{width:17px; font-size:9px;}
+    .stepper button{min-width:20px; height:23px; font-size:9.5px;}
+    .score-input{font-size:15px;}
+    tr.total-row td{font-size:19px;}
+  }
+
+  /* ---------- 矮螢幕（橫向手機）：壓縮非表格區域 ---------- */
+  @media (max-height:560px){
+    #app{gap:7px; padding-top:9px; padding-bottom:calc(9px + env(safe-area-inset-bottom));}
+    .masthead{padding-bottom:8px; gap:8px;}
+    .pennants{margin-bottom:3px;}
+    .foot-hint{display:none;}
+    .sb-label{padding:7px 13px;}
+    .sb-num{font-size:23px;}
+    .sb-team{padding:6px 10px 8px;}
+    .date-box{padding:6px 11px;}
+    .btn{padding:8px 13px; font-size:13.5px;}
+    .table-wrap{min-height:90px;}
+  }
+
+  /* Extra-score logs: 18 characters on roomy layouts. */
+  .extra-wrap{justify-content:flex-start; min-width:0; overflow:visible;}
+  .extra-input,.bonus-input{flex:0 1 14ch; width:14ch; min-width:0; max-width:100%; text-align:left; padding-left:5px;}
+  /* Keep every team column on screen on tablet and phone; inputs can scroll internally when focused. */
+  @media (max-width:1024px){
+    .table-wrap table{width:100%; min-width:0; table-layout:fixed;}
+    .table-wrap thead th.head-item,.table-wrap tbody td.item-col{width:25%; min-width:0;}
+    .table-wrap thead th.head-team{width:18.75%;}
+    .extra-input,.bonus-input{flex:1 1 auto; width:14ch; min-width:0; max-width:100%;}
+  }
+  @media (max-width:640px){
+    .table-wrap table{width:100%; min-width:0; table-layout:fixed;}
+    .table-wrap thead th.head-item,.table-wrap tbody td.item-col{width:28%; min-width:0;}
+    .table-wrap thead th.head-team{width:18%;}
+    .score-cell{padding-left:2px; padding-right:2px;}
+    .extra-input,.bonus-input{font-size:clamp(8px,2.7vw,11px); padding:2px 1px; letter-spacing:-.35px; text-align:center;}
+  }
+
+  /* Strict viewport fit: all five score-table columns stay on one screen. */
+  @media (max-width:1024px){
+    html,body,#app{width:100%; max-width:100%; overflow-x:hidden;}
+    .table-wrap{width:100%; max-width:100%; overflow-x:hidden !important; overflow-y:auto;}
+    .table-wrap table{width:100% !important; min-width:0 !important; max-width:100%; table-layout:fixed;}
+    .table-wrap thead th.head-item,.table-wrap tbody td.item-col{min-width:0 !important;}
+    .table-wrap th,.table-wrap td{min-width:0;}
+    .extra-wrap,.rank-pills,.stepper{max-width:100%; min-width:0;}
+    .extra-input,.bonus-input{min-width:0; max-width:100%;}
+  }
+
+  /* No horizontal swiping anywhere on compact screens; music controls wrap instead. */
+  @media (max-width:1024px){
+    .table-wrap{touch-action:pan-y !important;}
+  }
+
+  /* Adjustment logs wrap onto as many lines as needed; never truncate their text. */
+  .extra-wrap{display:block; min-width:0; width:100%; overflow:visible;}
+  .extra-tag{display:inline-block; margin:0 0 3px 0;}
+  .extra-input,.bonus-input{
+    display:block; box-sizing:border-box; width:100%; min-width:0; max-width:100%;
+    min-height:1.8em; height:auto; padding:3px 2px; text-align:left;
+    white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-all;
+    resize:none; overflow:hidden; font:600 12px/1.35 "Noto Sans TC","PingFang TC",sans-serif;
+  }
+  @media(max-width:640px){
+    .extra-wrap{margin-top:3px;}
+    .extra-tag{display:none;}
+    .extra-input,.bonus-input{font-size:10px; line-height:1.25; padding:2px 1px;}
+  }
+
+  /* iPhone 16 Pro / compact phones: prioritize the game-item table within the live browser viewport. */
+  @media (max-width:640px){
+    html,body{width:100%; max-width:100%; overflow-x:hidden;}
+    body{height:100%; min-height:0; overflow-y:hidden;}
+    #app{height:calc(100vh - 10px); height:calc(100dvh - 10px); min-height:0; gap:6px; overflow:hidden;}
+    .table-wrap{flex:1 1 0; min-height:180px; overflow-x:hidden !important; overflow-y:auto; touch-action:pan-y;}
+    .toolbar{gap:5px;}
+    .toolbar .btn{padding:7px 8px; font-size:11.5px;}
+    .head-tools{gap:6px;}
+    .masthead{gap:7px; padding-bottom:6px;}
+    .scorebar{gap:5px;}
+    .foot-hint{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="bunting"></div>
+<div id="app">
+  <header class="masthead">
+    <div class="brand">
+      <div class="pennants" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="title" contenteditable="true" spellcheck="false">深水埗崇真堂</div>
+      <div id="subtitle" contenteditable="true" spellcheck="false">Awana 每週分數記錄表（2026 - 2027 年度）</div>
+    </div>
+    <div class="head-tools">
+      <div class="date-box"><span class="date-label">DATE</span><input type="date" id="dateInput" value="2026-11-02"></div>
+      <button class="btn" id="fsBtn" title="全屏顯示">⛶ 全屏</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn primary" id="exportBtn">⬇️ 匯出 Excel</button>
+    <button class="btn" id="addGameBtn">➕ 新增 GAME</button>
+    <button class="btn" id="namesBtn">🎮 遊戲名稱庫</button>
+    <button class="btn danger" id="wipeBtn">🧹 清除資料</button>
+    <label class="check"><input type="checkbox" id="wipeAfterExport"> 匯出後自動清除</label>
+    <div class="save-flag" id="saveFlag"><span class="dot"></span><span id="saveText">已自動儲存</span></div>
+  </div>
+<div class="table-wrap">
+    <table id="scoreTable">
+      <thead id="thead"><tr><th class="head-item">遊戲項目</th><th class="head-team" style="background:#ef4444"><span class="team-name" contenteditable="true" spellcheck="false" data-team="0">紅組</span></th><th class="head-team" style="background:#3b82f6"><span class="team-name" contenteditable="true" spellcheck="false" data-team="1">藍組</span></th><th class="head-team" style="background:#22c55e"><span class="team-name" contenteditable="true" spellcheck="false" data-team="2">綠組</span></th><th class="head-team" style="background:#eab308"><span class="team-name" contenteditable="true" spellcheck="false" data-team="3">黃組</span></th></tr></thead>
+      <tbody id="tbody"><tr class="game-title-row"><td class="item-col" colspan="5"><button class="pick-btn" data-pick="game" data-game="0" title="選擇遊戲名稱">📋</button><span class="g-name" contenteditable="true" spellcheck="false" data-game="0">GAME 1</span><button class="btn small game-del" data-game="0">✕ 刪除此 GAME</button></td></tr><tr class="item-row" data-game="0" data-row="0"><td class="item-col"><div class="label-row"><button class="pick-btn" data-pick="row" data-game="0" data-row="0" title="選擇遊戲名稱">📋</button><textarea class="label-input" data-field="label" rows="1" placeholder="📋 選擇或直接輸入">項目</textarea><button class="row-del" title="刪除此行">✕</button></div><textarea class="note-input row-note" data-field="note" rows="1" placeholder="備註：如 +秩序分、+迅速反應分、−5 犯規"></textarea></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="0">①</button><button class="rank-pill" data-rank="2" data-team="0">②</button><button class="rank-pill" data-rank="3" data-team="0">③</button><button class="rank-pill" data-rank="4" data-team="0">④</button><button class="rank-pill clear" data-rank="0" data-team="0" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="0" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="0" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="1">①</button><button class="rank-pill" data-rank="2" data-team="1">②</button><button class="rank-pill" data-rank="3" data-team="1">③</button><button class="rank-pill" data-rank="4" data-team="1">④</button><button class="rank-pill clear" data-rank="0" data-team="1" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="1" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="1" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="2">①</button><button class="rank-pill" data-rank="2" data-team="2">②</button><button class="rank-pill" data-rank="3" data-team="2">③</button><button class="rank-pill" data-rank="4" data-team="2">④</button><button class="rank-pill clear" data-rank="0" data-team="2" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="2" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="2" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="3">①</button><button class="rank-pill" data-rank="2" data-team="3">②</button><button class="rank-pill" data-rank="3" data-team="3">③</button><button class="rank-pill" data-rank="4" data-team="3">④</button><button class="rank-pill clear" data-rank="0" data-team="3" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="3" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="3" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td></tr><tr class="item-row" data-game="0" data-row="1"><td class="item-col"><div class="label-row"><button class="pick-btn" data-pick="row" data-game="0" data-row="1" title="選擇遊戲名稱">📋</button><textarea class="label-input" data-field="label" rows="1" placeholder="📋 選擇或直接輸入">項目</textarea><button class="row-del" title="刪除此行">✕</button></div><textarea class="note-input row-note" data-field="note" rows="1" placeholder="備註：如 +秩序分、+迅速反應分、−5 犯規"></textarea></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="0">①</button><button class="rank-pill" data-rank="2" data-team="0">②</button><button class="rank-pill" data-rank="3" data-team="0">③</button><button class="rank-pill" data-rank="4" data-team="0">④</button><button class="rank-pill clear" data-rank="0" data-team="0" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="0" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="0" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="1">①</button><button class="rank-pill" data-rank="2" data-team="1">②</button><button class="rank-pill" data-rank="3" data-team="1">③</button><button class="rank-pill" data-rank="4" data-team="1">④</button><button class="rank-pill clear" data-rank="0" data-team="1" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="1" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="1" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="2">①</button><button class="rank-pill" data-rank="2" data-team="2">②</button><button class="rank-pill" data-rank="3" data-team="2">③</button><button class="rank-pill" data-rank="4" data-team="2">④</button><button class="rank-pill clear" data-rank="0" data-team="2" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="2" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="2" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="3">①</button><button class="rank-pill" data-rank="2" data-team="3">②</button><button class="rank-pill" data-rank="3" data-team="3">③</button><button class="rank-pill" data-rank="4" data-team="3">④</button><button class="rank-pill clear" data-rank="0" data-team="3" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="3" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="3" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td></tr><tr class="helper-row"><td colspan="5" style="text-align:right"><button class="btn small add-row" data-game="0">＋ 新增項目</button></td></tr><tr class="subtotal-row"><td class="item-col">GAME 1 小計</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr class="game-title-row"><td class="item-col" colspan="5"><button class="pick-btn" data-pick="game" data-game="1" title="選擇遊戲名稱">📋</button><span class="g-name" contenteditable="true" spellcheck="false" data-game="1">GAME 2</span><button class="btn small game-del" data-game="1">✕ 刪除此 GAME</button></td></tr><tr class="item-row" data-game="1" data-row="0"><td class="item-col"><div class="label-row"><button class="pick-btn" data-pick="row" data-game="1" data-row="0" title="選擇遊戲名稱">📋</button><textarea class="label-input" data-field="label" rows="1" placeholder="📋 選擇或直接輸入">項目</textarea><button class="row-del" title="刪除此行">✕</button></div><textarea class="note-input row-note" data-field="note" rows="1" placeholder="備註：如 +秩序分、+迅速反應分、−5 犯規"></textarea></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="0">①</button><button class="rank-pill" data-rank="2" data-team="0">②</button><button class="rank-pill" data-rank="3" data-team="0">③</button><button class="rank-pill" data-rank="4" data-team="0">④</button><button class="rank-pill clear" data-rank="0" data-team="0" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="0" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="0" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="1">①</button><button class="rank-pill" data-rank="2" data-team="1">②</button><button class="rank-pill" data-rank="3" data-team="1">③</button><button class="rank-pill" data-rank="4" data-team="1">④</button><button class="rank-pill clear" data-rank="0" data-team="1" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="1" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="1" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="2">①</button><button class="rank-pill" data-rank="2" data-team="2">②</button><button class="rank-pill" data-rank="3" data-team="2">③</button><button class="rank-pill" data-rank="4" data-team="2">④</button><button class="rank-pill clear" data-rank="0" data-team="2" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="2" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="2" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="3">①</button><button class="rank-pill" data-rank="2" data-team="3">②</button><button class="rank-pill" data-rank="3" data-team="3">③</button><button class="rank-pill" data-rank="4" data-team="3">④</button><button class="rank-pill clear" data-rank="0" data-team="3" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="3" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="3" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td></tr><tr class="item-row" data-game="1" data-row="1"><td class="item-col"><div class="label-row"><button class="pick-btn" data-pick="row" data-game="1" data-row="1" title="選擇遊戲名稱">📋</button><textarea class="label-input" data-field="label" rows="1" placeholder="📋 選擇或直接輸入">項目</textarea><button class="row-del" title="刪除此行">✕</button></div><textarea class="note-input row-note" data-field="note" rows="1" placeholder="備註：如 +秩序分、+迅速反應分、−5 犯規"></textarea></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="0">①</button><button class="rank-pill" data-rank="2" data-team="0">②</button><button class="rank-pill" data-rank="3" data-team="0">③</button><button class="rank-pill" data-rank="4" data-team="0">④</button><button class="rank-pill clear" data-rank="0" data-team="0" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="0" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="0" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="1">①</button><button class="rank-pill" data-rank="2" data-team="1">②</button><button class="rank-pill" data-rank="3" data-team="1">③</button><button class="rank-pill" data-rank="4" data-team="1">④</button><button class="rank-pill clear" data-rank="0" data-team="1" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="1" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="1" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="2">①</button><button class="rank-pill" data-rank="2" data-team="2">②</button><button class="rank-pill" data-rank="3" data-team="2">③</button><button class="rank-pill" data-rank="4" data-team="2">④</button><button class="rank-pill clear" data-rank="0" data-team="2" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="2" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="2" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td><td class="score-cell"><div class="rank-pills"><button class="rank-pill" data-rank="1" data-team="3">①</button><button class="rank-pill" data-rank="2" data-team="3">②</button><button class="rank-pill" data-rank="3" data-team="3">③</button><button class="rank-pill" data-rank="4" data-team="3">④</button><button class="rank-pill clear" data-rank="0" data-team="3" title="清除排名">✕</button></div><input class="score-input" data-field="score" data-team="3" inputmode="numeric" value="" title="排名分數"><div class="extra-wrap"><span class="extra-tag">額外</span><textarea class="extra-input" data-field="extra" data-team="3" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分"></textarea></div><div class="stepper"><button data-d="-10" data-target="extra">−10</button><button data-d="-5" data-target="extra">−5</button><button data-d="5" data-target="extra">+5</button><button data-d="10" data-target="extra">+10</button></div></td></tr><tr class="helper-row"><td colspan="5" style="text-align:right"><button class="btn small add-row" data-game="1">＋ 新增項目</button></td></tr><tr class="subtotal-row"><td class="item-col">GAME 2 小計</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr class="bonus-row"><td class="item-col"><textarea class="label-input" id="bonusLabelInput" rows="1">額外分數（例如 +秩序分、+迅速反應分 etc...）</textarea></td><td class="score-cell"><textarea class="score-input bonus-input" data-team="0" inputmode="text" rows="1" placeholder="+5-5" title="額外分數記錄"></textarea><div class="stepper"><button data-d="-10" data-target="score">−10</button><button data-d="-5" data-target="score">−5</button><button data-d="5" data-target="score">+5</button><button data-d="10" data-target="score">+10</button></div></td><td class="score-cell"><textarea class="score-input bonus-input" data-team="1" inputmode="text" rows="1" placeholder="+5-5" title="額外分數記錄"></textarea><div class="stepper"><button data-d="-10" data-target="score">−10</button><button data-d="-5" data-target="score">−5</button><button data-d="5" data-target="score">+5</button><button data-d="10" data-target="score">+10</button></div></td><td class="score-cell"><textarea class="score-input bonus-input" data-team="2" inputmode="text" rows="1" placeholder="+5-5" title="額外分數記錄"></textarea><div class="stepper"><button data-d="-10" data-target="score">−10</button><button data-d="-5" data-target="score">−5</button><button data-d="5" data-target="score">+5</button><button data-d="10" data-target="score">+10</button></div></td><td class="score-cell"><textarea class="score-input bonus-input" data-team="3" inputmode="text" rows="1" placeholder="+5-5" title="額外分數記錄"></textarea><div class="stepper"><button data-d="-10" data-target="score">−10</button><button data-d="-5" data-target="score">−5</button><button data-d="5" data-target="score">+5</button><button data-d="10" data-target="score">+10</button></div></td></tr><tr class="note-row"><td colspan="5" style="text-align:left"><textarea class="note-input" id="bonusNoteInput" rows="1" placeholder="備註：加/扣分原因、秩序分、迅速反應分 etc..."></textarea></td></tr><tr class="total-row"><td class="item-col">🏆 總分</td><td>0</td><td>0</td><td>0</td><td>0</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="scorebar" id="scoreBar"><div class="sb-label"><b>🏆 總分</b><span>SCORE</span></div><div class="sb-team" style="background:#ef4444"><div class="sb-name">紅組</div><div class="sb-num">0</div></div><div class="sb-team" style="background:#3b82f6"><div class="sb-name">藍組</div><div class="sb-num">0</div></div><div class="sb-team" style="background:#22c55e"><div class="sb-name">綠組</div><div class="sb-num">0</div></div><div class="sb-team" style="background:#eab308"><div class="sb-name">黃組</div><div class="sb-num">0</div></div></div>
+
+  <footer class="foot-hint">
+    <span>每行手動點選排名 ①②③④ → 自動套分（−10/−5/+5/+10 微調）</span>
+    <span>分數自動儲存於瀏覽器</span>
+    <span>用完請按「🧹 清除資料」</span>
+    <span>鍵盤 F = 全屏</span>
+  </footer>
+</div>
+
+<datalist id="gameNamesList"></datalist>
+
+<!-- 遊戲名稱選擇器 -->
+<div class="modal-backdrop" id="pickerModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>📋 選擇遊戲名稱</h3>
+      <button class="btn small" data-close="1">✕</button>
+    </div>
+    <input class="note-input" id="pickerSearch" placeholder="🔍 搜尋遊戲名稱..." autocomplete="off">
+    <div class="picker-list" id="pickerList"></div>
+    <div class="btn-row">
+      <button class="btn" id="namesBtn2">🎮 管理遊戲名稱庫</button>
+      <button class="btn ghost" data-close="1">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 遊戲名稱庫管理 -->
+<div class="modal-backdrop" id="managerModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>🎮 遊戲名稱庫 · 排名設定</h3>
+      <button class="btn small" data-close="1">✕</button>
+    </div>
+    <div class="btn-row">
+      <strong style="font-size:14px">⚙️ 排名計分：</strong>
+      <label class="check">① <input type="number" class="rank-pt" data-k="0" value="40"></label>
+      <label class="check">② <input type="number" class="rank-pt" data-k="1" value="30"></label>
+      <label class="check">③ <input type="number" class="rank-pt" data-k="2" value="20"></label>
+      <label class="check">④ <input type="number" class="rank-pt" data-k="3" value="10"></label>
+    </div>
+    <div class="hint">每行用手點選排名 ①②③④（可同分同名次），自動填入對應分數，之後可用 −10/−5/+5/+10 微調；✕ 清除排名。</div>
+    <div class="hint">每行一個名稱貼上即可導入；已存在的名稱會自動去重。</div>
+    <textarea class="note-input" id="namesTextarea" rows="7" placeholder="貼上遊戲名稱，每行一個..."></textarea>
+    <label class="check"><input type="checkbox" id="splitCommas" checked> 自動按逗號「, ， 、」拆分成獨立遊戲</label>
+    <div class="btn-row">
+      <button class="btn primary" id="importNamesBtn">📥 導入（合併）</button>
+      <button class="btn" id="replaceNamesBtn">♻️ 全部取代</button>
+      <button class="btn" id="fileImportBtn">📂 從檔案載入</button>
+      <button class="btn danger" id="clearNamesBtn">🗑 清空名稱庫</button>
+    </div>
+    <input type="file" id="namesFile" accept=".txt,.csv,.md" style="display:none">
+    <div class="hint">目前名稱庫（點 ✕ 可刪除單項）：</div>
+    <div class="picker-list" id="manageList"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+
+'use strict';
+document.documentElement.classList.add('app-script-ready');
+
+/* =========================================================
+   Awana 每週分數記錄表 - Interactive Scoring
+   - Auto-save in browser (localStorage)
+   - Export Excel (.xlsx via SheetJS / fallback .xls)
+   - Fullscreen fix
+   - Wipe data after use
+   ========================================================= */
+
+const STORE_KEY   = 'awannaScore_v1';
+const FLAG_KEY    = 'awannaScore_wipeAfterExport';
+const STEP_DEFAULT = 10;
+const STEPS = [-10, -5, 5, 10];
+function stepperHtml(target){
+  return '<div class="stepper">' +
+    STEPS.map(d => '<button data-d="' + d + '" data-target="' + (target || 'score') + '">' + (d > 0 ? '+' : '−') + Math.abs(d) + '</button>').join('') +
+    '</div>';
+}
+const RANK_CHARS  = ['①','②','③','④','⑤','⑥','⑦','⑧'];
+
+/* 預設遊戲名稱庫（導入自使用者提供的遊戲名稱清單） */
+const DEFAULT_GAME_NAMES = [
+  '開學禮，分組，介紹遊戲規則',
+  'Sparky Safari',
+  'Sparky Bowling Pin Relay',
+  'Sparky Train',
+  'cup stacks',
+  '接力跑步',
+  'Sparky BeanBag',
+  '運Ping Pong Ball',
+  '層層疊',
+  '二人三足（根）',
+  '頂豆袋路障',
+  '013 帶鞋走（建議除低常鞋對跳走，不解裝跟對鞋走）',
+  'Awana童子軍',
+  '095 一擊即中接力賽（建議由低班到高班接力）',
+  '088 Balloon Ball Pop',
+  '097 四環搶人',
+  '094 鑽雞群',
+  '066 換顏色 Choose Your Color',
+  'Golf 水管',
+  '總繩籃球 PingPong',
+  'Sparky Ball',
+  '踏板',
+  '聖誕合班',
+  '休課'
+];
+
+function defaultState(){
+  return {
+    title: '深水埗崇真堂',
+    subtitle: 'Awana 每週分數記錄表（2026 - 2027 年度）',
+    date: todayStr(),
+    teams: [
+      {name:'紅組', color:'#ef4444'},
+      {name:'藍組', color:'#3b82f6'},
+      {name:'綠組', color:'#22c55e'},
+      {name:'黃組', color:'#eab308'}
+    ],
+    games: [
+      {name:'GAME 1', rows:[blankRow(), blankRow()]},
+      {name:'GAME 2', rows:[blankRow(), blankRow()]}
+    ],
+    bonusLabel: '額外分數（例如 +秩序分、+迅速反應分 etc...）',
+    bonus: [null,null,null,null],
+    bonusNote: '',
+    gameNames: DEFAULT_GAME_NAMES.slice(),
+    rankPoints: [40, 30, 20, 10]
+  };
+}
+function blankRow(){
+  return {label:'項目', scores:[null,null,null,null], ranks:[null,null,null,null],
+          bonus:[null,null,null,null], note:''};
+}
+function todayStr(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+}
+
+/* ---------------- State load / save ---------------- */
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const s = JSON.parse(raw);
+    if(!s || !Array.isArray(s.teams) || s.teams.length < 2) return defaultState();
+    // normalize
+    s.games = Array.isArray(s.games) ? s.games : [];
+    s.games.forEach(g=>{
+      g.name = String(g.name || 'GAME');
+      g.rows = Array.isArray(g.rows) ? g.rows : [];
+      g.rows.forEach(r=>{
+        r.label = String(r.label ?? '項目');
+        const sc = Array.isArray(r.scores) ? r.scores.slice(0, s.teams.length) : [];
+        while(sc.length < s.teams.length) sc.push(null);
+        r.scores = sc;
+        const rk = Array.isArray(r.ranks) ? r.ranks.slice(0, s.teams.length) : [];
+        while(rk.length < s.teams.length) rk.push(null);
+        r.ranks = rk.map(x => (x === null || x === undefined || x === '' ? null : Number(x)));
+        const bn = Array.isArray(r.bonus) ? r.bonus.slice(0, s.teams.length) : [];
+        while(bn.length < s.teams.length) bn.push(null);
+        r.bonus = bn;
+        r.note = String(r.note || '');
+      });
+    });
+    s.teams.forEach(t=>{ t.name = String(t.name || '組'); t.color = t.color || '#888'; });
+    const b = Array.isArray(s.bonus) ? s.bonus.slice(0, s.teams.length) : [];
+    while(b.length < s.teams.length) b.push(null);
+    s.bonus = b;
+    s.bonusLabel = String(s.bonusLabel || '額外分數');
+    s.bonusNote = String(s.bonusNote || '');
+    s.gameNames = Array.isArray(s.gameNames) ? s.gameNames.map(String).filter(Boolean) : DEFAULT_GAME_NAMES.slice();
+    const rp = Array.isArray(s.rankPoints) ? s.rankPoints.slice(0,4).map(x => Number(x) || 0) : [];
+    while(rp.length < 4) rp.push([40,30,20,10][rp.length]);
+    s.rankPoints = rp;
+    s.title = String(s.title || '深水埗崇真堂');
+    s.subtitle = String(s.subtitle || 'Awana 每週分數記錄表');
+    s.date = String(s.date || todayStr());
+    return s;
+  }catch(e){
+    console.warn('loadState failed', e);
+    return defaultState();
+  }
+}
+
+let saveTimer = null;
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+      const t = new Date();
+      const p = n => String(n).padStart(2,'0');
+      document.getElementById('saveText').textContent =
+        '已自動儲存 ' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
+    }catch(e){
+      document.getElementById('saveText').textContent = '儲存失敗！';
+    }
+  }, 250);
+}
+
+let state = loadState();
+
+/* ---------------- Calculation ---------------- */
+function num(v){
+  if(v === null || v === undefined || v === '') return 0;
+  if(typeof v === 'number') return isFinite(v) ? v : 0;
+  const text = String(v).replace(/[＋﹢]/g,'+').replace(/[−–—﹣]/g,'-').replace(/\s+/g,'');
+  if(!text) return 0;
+  if(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) return Number(text) || 0;
+  const terms = text.match(/[+-]?(?:\d+(?:\.\d*)?|\.\d+)/g) || [];
+  return terms.reduce((sum, term)=>sum + (Number(term) || 0), 0);
+}
+function cleanExtraLog(value){
+  return String(value ?? '').replace(/[＋﹢]/g,'+').replace(/[−–—﹣]/g,'-').replace(/[^0-9+.\-]/g,'');
+}
+function displayExtraLog(value){
+  if(value === null || value === undefined || value === '') return '';
+  const text=cleanExtraLog(value);
+  if(!text) return '';
+  return /^[0-9.]/.test(text) ? '+'+text : text;
+}
+function signedNumber(value){const n=num(value);return (n>0?'+':'')+n;}
+function gameSubtotal(g, ti){
+  return g.rows.reduce((a,r)=>{
+    const base = num(r.scores[ti]);
+    const extra = Array.isArray(r.bonus) ? num(r.bonus[ti]) : 0;
+    return a + base + extra;
+  }, 0);
+}
+function teamTotal(ti){
+  const games = state.games.reduce((a,g)=> a + gameSubtotal(g, ti), 0);
+  return games + num(state.bonus[ti]);
+}
+/** (ranks are entered manually via ①②③④ buttons — no auto-ranking) */
+
+/* ---------------- Render ---------------- */
+function render(){
+  // header fields
+  document.getElementById('title').textContent = state.title;
+  document.getElementById('subtitle').textContent = state.subtitle;
+  document.getElementById('dateInput').value = state.date;
+
+  // thead
+  const thead = document.getElementById('thead');
+  thead.innerHTML = '<tr><th class="head-item">遊戲項目</th>' +
+    state.teams.map((t,i)=>(
+      '<th class="head-team" style="background:' + t.color + '">' +
+      '<span class="team-name" contenteditable="true" spellcheck="false" data-team="' + i + '">' + esc(t.name) + '</span></th>'
+    )).join('') + '</tr>';
+
+  // tbody
+  const tbody = document.getElementById('tbody');
+  let html = '';
+
+  state.games.forEach((g, gi)=>{
+    // game title row
+    html += '<tr class="game-title-row"><td class="item-col" colspan="' + (state.teams.length + 1) + '">' +
+      '<button class="pick-btn" data-pick="game" data-game="' + gi + '" title="選擇遊戲名稱">📋</button>' +
+      '<span class="g-name" contenteditable="true" spellcheck="false" data-game="' + gi + '">' + esc(g.name) + '</span>' +
+      '<button class="btn small game-del" data-game="' + gi + '">✕ 刪除此 GAME</button>' +
+      '</td></tr>';
+
+    // item rows
+    g.rows.forEach((r, ri)=>{
+      html += '<tr class="item-row" data-game="' + gi + '" data-row="' + ri + '">' +
+        '<td class="item-col"><div class="label-row">' +
+          '<button class="pick-btn" data-pick="row" data-game="' + gi + '" data-row="' + ri + '" title="選擇遊戲名稱">📋</button>' +
+          '<textarea class="label-input" data-field="label" rows="1" placeholder="📋 選擇或直接輸入">' + escAttr(r.label) + '</textarea>' +
+          '<button class="row-del" title="刪除此行">✕</button>' +
+        '</div>' +
+        '<textarea class="note-input row-note" data-field="note" rows="1" placeholder="備註：如 +秩序分、+迅速反應分、−5 犯規">' + escAttr(r.note || '') + '</textarea>' +
+        '</td>' +
+        r.scores.map((v, ti)=>{
+          const rk = Array.isArray(r.ranks) ? r.ranks[ti] : null;
+          const bv = Array.isArray(r.bonus) ? r.bonus[ti] : null;
+          const bvText = displayExtraLog(bv);
+          return '<td class="score-cell">' +
+            '<div class="rank-pills">' +
+              [1,2,3,4].map(k=>(
+                '<button class="rank-pill' + (rk === k ? ' on' : '') + '" data-rank="' + k + '" data-team="' + ti + '"' +
+                (rk === k ? ' style="background:' + state.teams[ti].color + '"' : '') + '>' + RANK_CHARS[k-1] + '</button>'
+              )).join('') +
+              '<button class="rank-pill clear" data-rank="0" data-team="' + ti + '" title="清除排名">✕</button>' +
+            '</div>' +
+            '<input class="score-input" data-field="score" data-team="' + ti + '" inputmode="numeric" value="' + (v === null || v === undefined ? '' : v) + '" title="排名分數">' +
+            '<div class="extra-wrap"><span class="extra-tag">額外</span>' +
+            '<textarea class="extra-input" data-field="extra" data-team="' + ti + '" inputmode="text" rows="1" placeholder="+5-5" title="可連續記錄加減分，例如 +5+10-5+10">' + escAttr(bvText) + '</textarea></div>' +
+            stepperHtml('extra') +
+          '</td>';
+        }).join('') +
+      '</tr>';
+    });
+
+    // add-row button row
+    html += '<tr class="helper-row"><td colspan="' + (state.teams.length + 1) + '" style="text-align:right">' +
+      '<button class="btn small add-row" data-game="' + gi + '">＋ 新增項目</button></td></tr>';
+
+    // subtotal row
+    html += '<tr class="subtotal-row"><td class="item-col">' + esc(g.name) + ' 小計</td>' +
+      state.teams.map((_, ti)=> '<td>' + gameSubtotal(g, ti) + '</td>').join('') + '</tr>';
+  });
+
+  // bonus row
+  html += '<tr class="bonus-row"><td class="item-col">' +
+    '<textarea class="label-input" id="bonusLabelInput" rows="1">' + escAttr(state.bonusLabel) + '</textarea>' +
+    '</td>' +
+    state.bonus.map((v, ti)=>(
+      '<td class="score-cell">' +
+        '<textarea class="score-input bonus-input" data-team="' + ti + '" inputmode="text" rows="1" placeholder="+5-5" title="額外分數可連續記錄，例如 +5+10-5+10">' + escAttr(displayExtraLog(v)) + '</textarea>' +
+        stepperHtml('score') +
+      '</td>'
+    )).join('') + '</tr>';
+
+  // note row
+  html += '<tr class="note-row"><td colspan="' + (state.teams.length + 1) + '" style="text-align:left">' +
+    '<textarea class="note-input" id="bonusNoteInput" rows="1" placeholder="備註：加/扣分原因、秩序分、迅速反應分 etc...">' + escAttr(state.bonusNote) + '</textarea>' +
+    '</td></tr>';
+
+  // total row
+  const totals = state.teams.map((_, ti)=> teamTotal(ti));
+  const max = Math.max.apply(null, totals);
+  html += '<tr class="total-row"><td class="item-col">🏆 總分</td>' +
+    totals.map((v, ti)=>(
+      '<td class="' + (v === max && max > 0 ? 'winner' : '') + '">' + v +
+      (v === max && max > 0 ? '<span class="trophy">👑</span>' : '') + '</td>'
+    )).join('') + '</tr>';
+
+  tbody.innerHTML = html;
+  tbody.querySelectorAll('textarea').forEach(autoGrow);
+  renderScoreBar(totals, max);
+
+  // datalist of game names (for autocomplete on label inputs)
+  const dl = document.getElementById('gameNamesList');
+  if(dl){
+    dl.innerHTML = state.gameNames.map(n => '<option value="' + escAttr(n) + '"></option>').join('');
+  }
+}
+
+/* textarea 自動增高（確保長文字完整顯示） */
+function autoGrow(el){
+  if(!el || el.tagName !== 'TEXTAREA') return;
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight + 2) + 'px';
+}
+
+function esc(s){
+  return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function escAttr(s){
+  return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/** refresh only numbers (subtotals / totals / rank badges) without rebuilding inputs */
+/** update subtotals / totals in place (numbers only) */
+function updateComputedCells(){
+  // subtotal rows: they follow the "+新增項目" helper row of each game.
+  const tbody = document.getElementById('tbody');
+  const rows = Array.from(tbody.children);
+  let gi = -1;
+  rows.forEach(tr=>{
+    if(tr.classList.contains('game-title-row')){
+      gi++;
+    }else if(tr.classList.contains('subtotal-row') && gi >= 0){
+      const tds = tr.querySelectorAll('td');
+      state.teams.forEach((_, ti)=>{
+        if(tds[ti+1]) tds[ti+1].textContent = gameSubtotal(state.games[gi], ti);
+      });
+    }
+  });
+
+  // totals
+  const totals = state.teams.map((_, ti)=> teamTotal(ti));
+  const max = Math.max.apply(null, totals);
+  const totalRow = tbody.querySelector('tr.total-row');
+  if(totalRow){
+    const tds = totalRow.querySelectorAll('td');
+    state.teams.forEach((_, ti)=>{
+      const td = tds[ti+1];
+      if(!td) return;
+      const isWin = (totals[ti] === max && max > 0);
+      td.className = isWin ? 'winner' : '';
+      td.innerHTML = totals[ti] + (isWin ? '<span class="trophy">👑</span>' : '');
+    });
+  }
+  updateScoreBar(totals, max);
+}
+
+/* ---------------- Events ---------------- */
+document.addEventListener('input', (e)=>{
+  const el = e.target;
+  if(el.tagName === 'TEXTAREA') autoGrow(el);
+
+  if(el.id === 'pickerSearch'){ renderPickerList(el.value); return; }
+  if(el.id === 'title'){ state.title = el.textContent.trim(); saveState(); return; }
+  if(el.id === 'subtitle'){ state.subtitle = el.textContent.trim(); saveState(); return; }
+
+  if(el.classList.contains('team-name')){
+    const ti = +el.dataset.team;
+    state.teams[ti].name = el.textContent.trim() || ('組 ' + (ti+1));
+    saveState(); return;
+  }
+  if(el.classList.contains('g-name')){
+    const gi = +el.dataset.game;
+    state.games[gi].name = el.textContent.trim() || ('GAME ' + (gi+1));
+    saveState(); return;
+  }
+
+  if(el.classList.contains('label-input') && el.dataset.field === 'label'){
+    const tr = el.closest('tr.item-row');
+    if(tr){
+      state.games[+tr.dataset.game].rows[+tr.dataset.row].label = el.value;
+      saveState();
+    }
+    return;
+  }
+  if(el.dataset.field === 'note'){
+    const tr = el.closest('tr.item-row');
+    if(tr){
+      state.games[+tr.dataset.game].rows[+tr.dataset.row].note = el.value;
+      saveState();
+    }
+    return;
+  }
+  if(el.id === 'bonusLabelInput'){ state.bonusLabel = el.value; saveState(); return; }
+  if(el.id === 'bonusNoteInput'){ state.bonusNote = el.value; saveState(); return; }
+
+  if(el.classList.contains('score-input') || el.classList.contains('extra-input')){
+    const ti = +el.dataset.team;
+    const isExtra = el.classList.contains('extra-input');
+    if(isExtra || el.classList.contains('bonus-input')){
+      const clean = cleanExtraLog(el.value);
+      if(el.value !== clean) el.value = clean;
+      const stored = clean === '' ? null : clean;
+      if(el.classList.contains('bonus-input')){
+        state.bonus[ti] = stored;
+      }else{
+        const tr = el.closest('tr.item-row');
+        if(tr){
+          const row = state.games[+tr.dataset.game].rows[+tr.dataset.row];
+          if(!Array.isArray(row.bonus)){ row.bonus = row.scores.map(()=>null); }
+          row.bonus[ti] = stored;
+        }
+      }
+    }else{
+      const raw = String(el.value).replace(/[^0-9.\-]/g, '');
+      const val = raw.trim() === '' ? null : Number(raw);
+      const clean = (val === null || isNaN(val)) ? null : val;
+      const tr = el.closest('tr.item-row');
+      if(tr) state.games[+tr.dataset.game].rows[+tr.dataset.row].scores[ti] = clean;
+    }
+    saveState();
+    updateComputedCells();
+    return;
+  }
+});
+
+document.addEventListener('change', (e)=>{
+  if(e.target.classList && (e.target.classList.contains('extra-input') || e.target.classList.contains('bonus-input'))){
+    const value=displayExtraLog(e.target.value);
+    e.target.value=value;
+    autoGrow(e.target);
+    const ti=+e.target.dataset.team;
+    const stored=value || null;
+    if(e.target.classList.contains('bonus-input')) state.bonus[ti]=stored;
+    else {
+      const tr=e.target.closest('tr.item-row');
+      if(tr){const row=state.games[+tr.dataset.game].rows[+tr.dataset.row];if(!Array.isArray(row.bonus))row.bonus=row.scores.map(()=>null);row.bonus[ti]=stored;}
+    }
+    saveState();updateComputedCells();
+  }
+  if(e.target.id === 'dateInput'){
+    state.date = e.target.value || todayStr();
+    saveState();
+  }
+  if(e.target.id === 'wipeAfterExport'){
+    try{ localStorage.setItem(FLAG_KEY, e.target.checked ? '1' : '0'); }catch(err){}
+  }
+  if(e.target.classList && e.target.classList.contains('rank-pt')){
+    const k = +e.target.dataset.k;
+    const v = Number(e.target.value);
+    state.rankPoints[k] = isNaN(v) ? 0 : v;
+    saveState();
+    toast('⚙️ 排名計分已更新：' + state.rankPoints.map((p,i)=>RANK_CHARS[i] + p).join('、'));
+  }
+  if(e.target.id === 'namesFile'){
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      document.getElementById('namesTextarea').value = String(reader.result || '');
+      toast('📂 已載入檔案內容，請按「📥 導入」');
+    };
+    reader.readAsText(f, 'utf-8');
+    e.target.value = '';
+  }
+});
+
+document.addEventListener('click', (e)=>{
+  // picker item selection
+  const pItem = e.target.closest('.picker-item');
+  if(pItem){
+    applyPick(pItem.textContent.trim());
+    return;
+  }
+  // backdrop click closes
+  if(e.target.classList && e.target.classList.contains('modal-backdrop')){
+    closeModals();
+    return;
+  }
+
+  const btn = e.target.closest('button');
+  if(!btn) return;
+
+  // close modal buttons
+  if(btn.dataset.close !== undefined){ closeModals(); return; }
+
+  // open game-name picker (for a row or a game title)
+  if(btn.classList.contains('pick-btn')){
+    openPicker({
+      type: btn.dataset.pick,
+      gi: +btn.dataset.game,
+      ri: (btn.dataset.row !== undefined ? +btn.dataset.row : -1)
+    });
+    return;
+  }
+
+  // game-name library manager
+  if(btn.id === 'namesBtn' || btn.id === 'namesBtn2'){ openManager(); return; }
+  if(btn.id === 'importNamesBtn'){ importNames(false); return; }
+  if(btn.id === 'replaceNamesBtn'){ importNames(true); return; }
+  if(btn.id === 'fileImportBtn'){ document.getElementById('namesFile').click(); return; }
+  if(btn.id === 'clearNamesBtn'){
+    if(confirm('清空遊戲名稱庫？')){
+      state.gameNames = [];
+      saveState(); renderManageList(); render();
+      toast('🗑 名稱庫已清空');
+    }
+    return;
+  }
+  if(btn.classList.contains('name-del')){
+    state.gameNames.splice(+btn.dataset.i, 1);
+    saveState(); renderManageList(); render();
+    return;
+  }
+
+  // manual rank buttons ①②③④ / ✕
+  if(btn.classList.contains('rank-pill')){
+    const tr = btn.closest('tr.item-row');
+    if(!tr) return;
+    const gi = +tr.dataset.game, ri = +tr.dataset.row, ti = +btn.dataset.team;
+    const row = state.games[gi] && state.games[gi].rows[ri];
+    if(!row) return;
+    if(!Array.isArray(row.ranks)){ row.ranks = row.scores.map(()=>null); }
+    const k = +btn.dataset.rank;
+    const oldRank = row.ranks[ti];
+    if(k === 0){
+      row.ranks[ti] = null;
+      // 若分數仍是排名自動填入的分數，一併清除
+      if(oldRank && num(row.scores[ti]) === num(state.rankPoints[oldRank-1])){
+        row.scores[ti] = null;
+      }
+    }else{
+      row.ranks[ti] = k;
+      row.scores[ti] = num(state.rankPoints[k-1]);
+    }
+    saveState(); render();
+    return;
+  }
+
+  // stepper buttons
+  if(btn.dataset.d !== undefined){
+    const cell = btn.closest('.score-cell');
+    const isExtra = (btn.dataset.target === 'extra');
+    const input = cell && cell.querySelector(isExtra ? '.extra-input' : '.score-input');
+    if(!input) return;
+    const delta = Number(btn.dataset.d);
+    if(isExtra || input.classList.contains('bonus-input')){
+      const sign=delta>0?'+':'';
+      input.value=cleanExtraLog(input.value)+sign+delta;
+    }else{
+      const cur = input.value.trim() === '' ? 0 : Number(input.value);
+      const next = (isNaN(cur) ? 0 : cur) + delta;
+      input.value=String(next);
+    }
+    input.dispatchEvent(new Event('input', {bubbles:true}));
+    return;
+  }
+
+  // add row
+  if(btn.classList.contains('add-row')){
+    const gi = +btn.dataset.game;
+    state.games[gi].rows.push(blankRow());
+    saveState(); render();
+    return;
+  }
+
+  // delete row
+  if(btn.classList.contains('row-del')){
+    const tr = btn.closest('tr.item-row');
+    if(!tr) return;
+    const gi = +tr.dataset.game, ri = +tr.dataset.row;
+    const r = state.games[gi].rows[ri];
+    const hasData = r.scores.some(v => v !== null && v !== undefined && v !== '');
+    if(hasData && !confirm('刪除此項目行？（該行已有分數）')) return;
+    state.games[gi].rows.splice(ri, 1);
+    saveState(); render();
+    return;
+  }
+
+  // delete game
+  if(btn.classList.contains('game-del')){
+    const gi = +btn.dataset.game;
+    if(!confirm('刪除 ' + state.games[gi].name + ' 及其所有項目？')) return;
+    state.games.splice(gi, 1);
+    saveState(); render();
+    return;
+  }
+
+  // add game
+  if(btn.id === 'addGameBtn'){
+    state.games.push({name:'GAME ' + (state.games.length + 1), rows:[blankRow(), blankRow()]});
+    saveState(); render();
+    toast('已新增 ' + state.games[state.games.length-1].name);
+    return;
+  }
+
+  // export
+  if(btn.id === 'exportBtn'){ exportExcel(); return; }
+
+  // wipe
+  if(btn.id === 'wipeBtn'){
+    if(!confirm('⚠️ 確定清除所有計分資料？\n此操作不可復原！')) return;
+    if(!confirm('再次確認：真的要清除全部資料嗎？')) return;
+    wipeData(false);
+    return;
+  }
+
+  // fullscreen
+  if(btn.id === 'fsBtn'){ toggleFullscreen(); return; }
+});
+
+/* ---------------- Game-name picker & library ---------------- */
+let pickerTarget = null;
+
+function openPicker(target){
+  pickerTarget = target;
+  const m = document.getElementById('pickerModal');
+  document.getElementById('pickerSearch').value = '';
+  renderPickerList('');
+  m.classList.add('open');
+  setTimeout(()=>{ try{ document.getElementById('pickerSearch').focus(); }catch(e){} }, 60);
+}
+
+function renderPickerList(q){
+  const list = document.getElementById('pickerList');
+  const query = (q || '').toLowerCase();
+  const names = state.gameNames.filter(n => !query || n.toLowerCase().includes(query));
+  list.innerHTML = names.length
+    ? names.map(n => '<div class="picker-item">' + esc(n) + '</div>').join('')
+    : '<div class="hint" style="padding:12px">找不到名稱 — 可按下方「🎮 管理遊戲名稱庫」新增</div>';
+}
+
+function applyPick(name){
+  const t = pickerTarget;
+  if(!t){ closeModals(); return; }
+  if(t.type === 'row' && state.games[t.gi] && state.games[t.gi].rows[t.ri]){
+    state.games[t.gi].rows[t.ri].label = name;
+    toast('✅ 項目已設為：' + name);
+  }else if(t.type === 'game' && state.games[t.gi]){
+    state.games[t.gi].name = name;
+    toast('✅ GAME 已設為：' + name);
+  }
+  saveState();
+  render();
+  closeModals();
+}
+
+function closeModals(){
+  document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+  pickerTarget = null;
+}
+
+function openManager(){
+  closeModals();
+  document.getElementById('namesTextarea').value = '';
+  document.querySelectorAll('.rank-pt').forEach(inp=>{
+    inp.value = state.rankPoints[+inp.dataset.k];
+  });
+  renderManageList();
+  document.getElementById('managerModal').classList.add('open');
+}
+
+function renderManageList(){
+  const el = document.getElementById('manageList');
+  el.innerHTML = state.gameNames.length
+    ? state.gameNames.map((n, i)=>(
+        '<div class="manage-item"><span>' + esc(n) + '</span>' +
+        '<button class="btn small danger name-del" data-i="' + i + '">✕</button></div>'
+      )).join('')
+    : '<div class="hint" style="padding:12px">名稱庫目前是空的</div>';
+}
+
+function importNames(replace){
+  const ta = document.getElementById('namesTextarea');
+  const split = document.getElementById('splitCommas').checked;
+  let lines = String(ta.value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if(split){
+    lines = lines.reduce((acc, l)=> acc.concat(l.split(/[,，、]/).map(s => s.trim()).filter(Boolean)), []);
+  }
+  if(!lines.length){ toast('請先貼上或載入遊戲名稱'); return; }
+  const merged = replace ? [] : state.gameNames.slice();
+  let added = 0;
+  lines.forEach(n=>{ if(!merged.includes(n)){ merged.push(n); added++; } });
+  state.gameNames = merged;
+  saveState();
+  renderManageList();
+  render();
+  ta.value = '';
+  toast((replace ? '♻️ 已取代為 ' : '📥 已合併新增 ') + added + ' 個名稱（共 ' + merged.length + ' 個）');
+}
+
+/* ---------------- Wipe ---------------- */
+function wipeData(confirmFirst){
+  if(confirmFirst && !confirm('確定清除所有計分資料？')) return;
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  state = defaultState();
+  render();
+  toast('🧹 資料已清除，可以開始新一局！');
+}
+
+/* ---------------- Excel export ---------------- */
+function buildAoa(withRank){
+  const t = state.teams;
+  const head = ['遊戲項目'].concat(t.map(x => x.name));
+  const rows = [head];
+
+  state.games.forEach(g=>{
+    g.rows.forEach(r=>{
+      const label = r.note ? (r.label + '（' + r.note + '）') : r.label;
+      rows.push([label].concat(r.scores.map((v, ti)=>{
+        const rk = Array.isArray(r.ranks) ? r.ranks[ti] : null;
+        const rankChar = (withRank && rk) ? (RANK_CHARS[rk-1] || String(rk)) : '';
+        const bonusLog = Array.isArray(r.bonus) ? displayExtraLog(r.bonus[ti]) : '';
+        const bn = Array.isArray(r.bonus) ? num(r.bonus[ti]) : 0;
+        const base = (v === null || v === undefined || v === '') ? '' : String(v);
+        const bonusStr = bonusLog ? '(額外 ' + bonusLog + ' = ' + signedNumber(bn) + ')' : '';
+        const core = ((rankChar ? rankChar + ' ' : '') + base).trim();
+        return (core + (bonusStr ? (core ? ' ' : '') + bonusStr : '')).trim();
+      })));
+    });
+    rows.push([g.name + ' 小計'].concat(t.map((_, ti)=> gameSubtotal(g, ti))));
+  });
+
+  rows.push([state.bonusLabel].concat(state.bonus.map(v => {const log=displayExtraLog(v);return log ? log + '（合計 ' + signedNumber(num(v)) + '）' : '';})));
+  if(state.bonusNote) rows.push(['備註：' + state.bonusNote, '', '', '']);
+  rows.push(['總分'].concat(t.map((_, ti)=> teamTotal(ti))));
+  return rows;
+}
+
+function exportFileName(){
+  return 'Awana分數記錄表_' + (state.date || todayStr());
+}
+
+function exportExcel(){
+  try{
+    const aoa = buildAoa(true);
+    const titleRows = [
+      [state.title],
+      [state.subtitle],
+      ['Date: ' + (state.date || todayStr())],
+      []
+    ];
+    const full = titleRows.concat(aoa);
+
+    if(window.XLSX){
+      const ws = XLSX.utils.aoa_to_sheet(full);
+      ws['!cols'] = [{wch:32}].concat(state.teams.map(()=>({wch:12})));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Awana');
+      XLSX.writeFile(wb, exportFileName() + '.xlsx');
+      toast('✅ 已匯出 ' + exportFileName() + '.xlsx');
+    }else{
+      exportHtmlXls(full);
+      toast('✅ 已匯出 ' + exportFileName() + '.xls');
+    }
+
+    // wipe-after-export
+    const chk = document.getElementById('wipeAfterExport');
+    if(chk && chk.checked){
+      setTimeout(()=>{
+        if(confirm('已匯出 Excel ✅\n\n是否立即清除瀏覽器內的計分資料？')) wipeData(false);
+      }, 400);
+    }
+  }catch(err){
+    console.error(err);
+    toast('❌ 匯出失敗：' + err.message);
+  }
+}
+
+/** fallback: HTML-table .xls (opens in Excel / WPS without any library) */
+function exportHtmlXls(aoa){
+  const teamColors = state.teams.map(t => t.color);
+  let table = '<table border="1"><thead><tbody>';
+  aoa.forEach((row, ri)=>{
+    table += '<tr>';
+    row.forEach((cell, ci)=>{
+      let bg = '', color = '#000', bold = '';
+      if(ri < 3){ bold = 'font-weight:bold;'; bg = '#dce6f1'; }
+      const isHeadCell = (ri === 4);
+      if(isHeadCell && ci > 0 && teamColors[ci-1]){ bg = teamColors[ci-1]; color = '#fff'; bold = 'font-weight:bold;'; }
+      if(isHeadCell && ci === 0){ bg = '#16233c'; color = '#fff'; bold = 'font-weight:bold;'; }
+      const lastRow = (ri === aoa.length - 1);
+      if(lastRow){ bold = 'font-weight:bold;'; bg = '#e2efda'; }
+      table += '<td style="' + bold + 'background:' + bg + ';color:' + color + ';padding:6px 10px;font-size:14pt">' + esc(cell) + '</td>';
+    });
+    table += '</tr>';
+  });
+  table += '</tbody></table>';
+
+  const html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>' + table + '</body></html>';
+  const blob = new Blob(['\ufeff' + html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = exportFileName() + '.xls';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 800);
+}
+
+/* ---------------- Fullscreen (fixed) ---------------- */
+function fsElement(){
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+async function toggleFullscreen(){
+  const el = document.documentElement;
+  try{
+    if(!fsElement()){
+      if(el.requestFullscreen){
+        await el.requestFullscreen({navigationUI:'hide'});
+      }else if(el.webkitRequestFullscreen){
+        el.webkitRequestFullscreen();
+      }else if(navigator.standalone === false && /iPhone|iPad|iPod/i.test(navigator.userAgent)){
+        // iOS Safari: no element fullscreen -> best effort
+        window.scrollTo(0, 1);
+        toast('iOS 建議用 Safari「分享 → 加入主畫面」以獲得真正全屏');
+        return;
+      }else{
+        toast('此瀏覽器不支援全屏 API');
+        return;
+      }
+      // try landscape lock (ignore errors)
+      try{
+        if(screen.orientation && screen.orientation.lock){
+          screen.orientation.lock('landscape').catch(()=>{});
+        }
+      }catch(e){}
+    }else{
+      if(document.exitFullscreen) await document.exitFullscreen();
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  }catch(err){
+    toast('全屏切換失敗：' + err.message);
+  }
+  setTimeout(updateFsBtn, 120);
+}
+function updateFsBtn(){
+  const btn = document.getElementById('fsBtn');
+  btn.textContent = fsElement() ? '⛶ 退出全屏' : '⛶ 全屏';
+}
+document.addEventListener('fullscreenchange', updateFsBtn);
+document.addEventListener('webkitfullscreenchange', updateFsBtn);
+
+// keyboard shortcut: F for fullscreen
+document.addEventListener('keydown', (e)=>{
+  if(e.target.matches('input, textarea, [contenteditable="true"]')) return;
+  if(e.key === 'f' || e.key === 'F'){ toggleFullscreen(); }
+  if(e.key === 'Escape'){ closeModals(); }
+});
+
+/* ---------------- Toast ---------------- */
+let toastTimer = null;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
+}
+
+/* ---------------- Misc fixes ---------------- */
+// prevent double-tap zoom on rapid taps (mobile)
+let lastTouch = 0;
+document.addEventListener('touchend', (e)=>{
+  const now = Date.now();
+  if(now - lastTouch < 350 && e.cancelable && !e.target.matches('input, textarea, [contenteditable="true"], button')){
+    e.preventDefault();
+  }
+  lastTouch = now;
+}, {passive:false});
+
+// prevent pull-to-refresh at top（只在整頁不需要捲動時才阻擋）
+document.addEventListener('touchmove', (e)=>{
+  const doc = document.documentElement;
+  const pageScrollable = doc.scrollHeight > window.innerHeight + 2;
+  if(e.target.closest('.table-wrap, .modal, .modal-backdrop')) return;
+  if(!pageScrollable && window.scrollY === 0 && e.cancelable){
+    e.preventDefault();
+  }
+}, {passive:false});
+
+/* ---------------- Bottom scoreboard strip ---------------- */
+function renderScoreBar(totals, max){
+  const bar = document.getElementById('scoreBar');
+  if(!bar) return;
+  bar.innerHTML =
+    '<div class="sb-label"><b>🏆 總分</b><span>SCORE</span></div>' +
+    state.teams.map((t, ti)=>{
+      const isWin = (totals[ti] === max && max > 0);
+      return '<div class="sb-team' + (isWin ? ' winner' : '') + '" style="background:' + t.color + '">' +
+        '<div class="sb-name">' + esc(t.name) + (isWin ? ' 👑' : '') + '</div>' +
+        '<div class="sb-num">' + totals[ti] + '</div>' +
+      '</div>';
+    }).join('');
+}
+function updateScoreBar(totals, max){ renderScoreBar(totals, max); }
+
+/* ---------------- Boot ---------------- */
+try{
+  document.getElementById('wipeAfterExport').checked = (localStorage.getItem(FLAG_KEY) === '1');
+}catch(e){}
+render();
+updateFsBtn();
+
+</script>
+</body>
+</html>
